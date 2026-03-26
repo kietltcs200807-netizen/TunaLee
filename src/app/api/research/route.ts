@@ -20,6 +20,10 @@ async function fetchWebResults(query: string) {
   }));
 }
 
+export async function GET() {
+  return NextResponse.json({ error: "Method not allowed: use POST" }, { status: 405 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     let GoogleGenerativeAI;

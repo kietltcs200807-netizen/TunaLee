@@ -45,6 +45,10 @@ function parseTaskArray(raw: string): Array<{ [key: string]: unknown }> {
   }
 }
 
+export async function GET() {
+  return NextResponse.json({ error: "Method not allowed: use POST" }, { status: 405 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     let GoogleGenerativeAI;

@@ -3,6 +3,10 @@ import { getRoom } from "@/lib/firebase/firestore";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+export async function GET() {
+  return NextResponse.json({ error: "Method not allowed: use POST" }, { status: 405 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     let GoogleGenerativeAI;
