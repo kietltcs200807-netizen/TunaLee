@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -23,6 +22,14 @@ async function fetchWebResults(query: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    let GoogleGenerativeAI;
+    try {
+      ({ GoogleGenerativeAI } = await import("@google/generative-ai"));
+    } catch (importError) {
+      console.error("Failed to import GoogleGenerativeAI:", importError);
+      return NextResponse.json({ error: "Failed to load AI SDK" }, { status: 500 });
+    }
+
     if (!GEMINI_API_KEY || GEMINI_API_KEY === "your_actual_gemini_api_key_here") {
       return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
     }
