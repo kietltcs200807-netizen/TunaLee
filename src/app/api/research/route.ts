@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 async function fetchWebResults(query: string) {
   const bingKey = process.env.BING_SEARCH_API_KEY;
@@ -23,11 +22,18 @@ async function fetchWebResults(query: string) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!genAI) {
-    return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
-  }
-
   try {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "your_actual_gemini_api_key_here") {
+      return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
+    }
+
+    let genAI;
+    try {
+      genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    } catch (genAIError) {
+      console.error("Failed to create GoogleGenerativeAI:", genAIError);
+      return NextResponse.json({ error: "Failed to initialize AI client" }, { status: 500 });
+    }
     const { query, history } = await req.json();
 
     if (!query) {
@@ -40,9 +46,13 @@ export async function POST(req: NextRequest) {
       ? webResults.map((res: { title: string; snippet: string; url: string }, i: number) => `${i + 1}. ${res.title}\n${res.snippet}\n${res.url}`).join("\n\n")
       : "";
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
-    });
+    let model;
+    try {
+      model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    } catch (modelError) {
+      console.error("Failed to create Gemini model:", modelError);
+      return NextResponse.json({ error: "Failed to initialize AI model" }, { status: 500 });
+    }
 
     const formattedHistory = (history || []).map((msg: any) => ({
       role: msg.role === "assistant" ? "model" : "user",

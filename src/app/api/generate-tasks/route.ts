@@ -3,7 +3,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfParse from "pdf-parse";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const MAX_CHUNK_SIZE = 12000; // characters, safe for model context
 
 function splitTextIntoChunks(text: string, maxSize: number): string[] {
@@ -50,50 +49,34 @@ function parseTaskArray(raw: string): Array<{ [key: string]: unknown }> {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!genAI) {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "your_actual_gemini_api_key_here") {
       return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
     }
 
-    const { documentUrl, rawText, members, type, deadline } = await req.json();
-
-    if ((!documentUrl && !rawText) || !members || members.length === 0) {
-      return NextResponse.json({ error: "Missing source document (URL or text) or members list" }, { status: 400 });
+    let genAI;
+    try {
+      genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    } catch (genAIError) {
+      console.error("Failed to create GoogleGenerativeAI:", genAIError);
+      return NextResponse.json({ error: "Failed to initialize AI client" }, { status: 500 });
     }
 
-    let text = "";
-    if (rawText) {
-      text = String(rawText);
-    } else {
-      try {
-        const fileRes = await fetch(documentUrl);
-        if (!fileRes.ok) {
-          return NextResponse.json({ error: `Failed to fetch document: ${fileRes.status}` }, { status: 400 });
-        }
-        const arrayBuffer = await fileRes.arrayBuffer();
-
-        if (documentUrl.includes(".pdf") || documentUrl.includes("application%2Fpdf")) {
-          try {
-            const pdfData = await (pdfParse as any)(Buffer.from(arrayBuffer));
-            text = pdfData.text;
-          } catch (pdfError) {
-            console.error("PDF parsing error:", pdfError);
-            return NextResponse.json({ error: "Failed to parse PDF document" }, { status: 500 });
-          }
-        } else {
-          text = Buffer.from(arrayBuffer).toString("utf-8");
-        }
-      } catch (fetchError) {
-        console.error("Document fetch error:", fetchError);
-        return NextResponse.json({ error: "Failed to fetch document" }, { status: 500 });
-      }
+    let model;
+    try {
+      model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    } catch (modelError) {
+      console.error("Failed to create Gemini model:", modelError);
+      return NextResponse.json({ error: "Failed to initialize AI model" }, { status: 500 });
     }
 
-    if (!text.trim()) {
-      return NextResponse.json({ tasks: [] });
+    const body = await req.json();
+    const { text, members, type, deadline } = body;
+
+    if (!text || !members || !Array.isArray(members)) {
+      return NextResponse.json({ error: "Missing required fields: text and members array" }, { status: 400 });
     }
 
     const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const allTasks: Array<{ [key: string]: unknown }> = [];
 
     for (let i = 0; i < chunks.length; i++) {

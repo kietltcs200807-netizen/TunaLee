@@ -3,14 +3,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getRoom } from "@/lib/firebase/firestore";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 export async function POST(req: NextRequest) {
-  if (!genAI) {
-    return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
-  }
-
   try {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "your_actual_gemini_api_key_here") {
+      return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
+    }
+
+    let genAI;
+    try {
+      genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    } catch (genAIError) {
+      console.error("Failed to create GoogleGenerativeAI:", genAIError);
+      return NextResponse.json({ error: "Failed to initialize AI client" }, { status: 500 });
+    }
     const { message, roomId, history } = await req.json();
 
     if (!message || !roomId) {
@@ -23,7 +29,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    let model;
+    try {
+      model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    } catch (modelError) {
+      console.error("Failed to create Gemini model:", modelError);
+      return NextResponse.json({ error: "Failed to initialize AI model" }, { status: 500 });
+    }
 
     // Build context from chat history
     const context = history ? history.map((h: { role: string; content: string }) => `${h.role}: ${h.content}`).join('\n') : '';
