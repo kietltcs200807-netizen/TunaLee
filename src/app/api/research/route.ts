@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAQH99wT9humD2T-oE1eXuYEAOix6Q-ssM";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 async function fetchWebResults(query: string) {
   const bingKey = process.env.BING_SEARCH_API_KEY;
@@ -23,6 +23,10 @@ async function fetchWebResults(query: string) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!genAI) {
+    return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
+  }
+
   try {
     const { query, history } = await req.json();
 

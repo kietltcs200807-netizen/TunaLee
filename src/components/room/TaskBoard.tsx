@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
+import { fetchJson } from "@/lib/fetchJson";
 import { Task, Submission, Evaluation, submitTask, deleteTask, updateTaskStatus, updateTask } from "@/lib/firebase/tasks";
 import { getRoomSettings, RoomSettings } from "@/lib/firebase/settings";
 import { getRoom, Room } from "@/lib/firebase/firestore";
@@ -56,11 +57,8 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
     if (!roomId) return;
     try {
       const qs = new URLSearchParams({ roomId });
-      const res = await fetch(`/api/feedback?${qs.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setFeedbacks(data.feedback || []);
-      }
+      const data = await fetchJson(`/api/feedback?${qs.toString()}`);
+      setFeedbacks(data.feedback || []);
     } catch (err) {
       console.error("Unable to fetch feedback", err);
     }
@@ -165,12 +163,11 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
         rating: feedbackRating,
         comment: feedbackComment.trim(),
       };
-      const res = await fetch("/api/feedback", {
+      await fetchJson("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Feedback submit failed");
       setFeedbackComment("");
       setFeedbackRating(5);
       setFeedbackModalOpen(false);
@@ -191,7 +188,7 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
     }
     setCalendarSyncLoading(true);
     try {
-      const res = await fetch("/api/calendar", {
+      await fetchJson("/api/calendar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -203,7 +200,6 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
           roomName: room.name,
         }),
       });
-      if (!res.ok) throw new Error("Calendar sync failed");
       alert("Task synced to Google Calendar.");
     } catch (err) {
       console.error(err);
@@ -230,7 +226,7 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
     try {
       const recipients = memberProfiles.filter(profile => finalMemberIds.includes(profile.uid)).map(profile => profile.email).filter(Boolean) as string[];
 
-      const res = await fetch("/api/remind", {
+      await fetchJson("/api/remind", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -240,7 +236,6 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
           tasks: pendingTasks.map(t => ({ title: t.title, assigneeId: t.assigneeId, deadline: t.deadline }))
         }),
       });
-      if (!res.ok) throw new Error("Failed to send");
       alert("Reminders generated and sent successfully!");
     } catch (err) {
       alert("Error sending reminders.");
@@ -268,7 +263,7 @@ export default function TaskBoard({ roomId, role }: { roomId: string, role: "Lea
 
   const handleEvaluateSubmission = async (taskId: string, submissionId: string) => {
     try {
-      await fetch("/api/evaluate-submission", {
+      await fetchJson("/api/evaluate-submission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, submissionId, roomId }),

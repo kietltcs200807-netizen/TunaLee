@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfParse from "pdf-parse";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAQH99wT9humD2T-oE1eXuYEAOix6Q-ssM";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const MAX_CHUNK_SIZE = 12000; // characters, safe for model context
 
 function splitTextIntoChunks(text: string, maxSize: number): string[] {
@@ -49,6 +49,10 @@ function parseTaskArray(raw: string): Array<{ [key: string]: unknown }> {
 }
 
 export async function POST(req: NextRequest) {
+  if (!genAI) {
+    return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
+  }
+
   try {
     const { documentUrl, rawText, members, type, deadline } = await req.json();
 

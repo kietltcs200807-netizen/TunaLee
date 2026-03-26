@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { uploadDocument, getRoomDocuments, ProjectDocument } from "@/lib/firebase/storage";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { FileText, Upload, Loader2, BrainCircuit } from "lucide-react";
+import { fetchJson } from "@/lib/fetchJson";
 import AssignmentCreator from "./AssignmentCreator";
 
 export default function DocumentTab({ roomId, role }: { roomId: string, role: "Leader" | "Member" }) {
@@ -64,7 +65,7 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
       const room = await getRoom(roomId);
       if (!room) throw new Error("Room not found");
 
-      const res = await fetch("/api/generate-tasks", {
+      const data = await fetchJson("/api/generate-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -75,9 +76,6 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
           deadline: taskDeadline || undefined
         }),
       });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to generate tasks");
       
       const { createTask } = await import("@/lib/firebase/tasks");
       for (const t of data.tasks) {
@@ -118,7 +116,7 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
       const room = await getRoom(roomId);
       if (!room) throw new Error("Room not found");
 
-      const res = await fetch("/api/generate-tasks", {
+      const data = await fetchJson("/api/generate-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -129,9 +127,6 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
           deadline: taskDeadline || undefined
         }),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to generate tasks");
 
       const { createTask } = await import("@/lib/firebase/tasks");
       for (const t of data.tasks) {

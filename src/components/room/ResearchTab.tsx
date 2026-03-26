@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { BrainCircuit, Send, Loader2, Bot, User } from "lucide-react";
 import { motion } from "framer-motion";
+import { fetchJson } from "@/lib/fetchJson";
 
 interface Message {
   role: "user" | "assistant";
@@ -34,14 +35,11 @@ export default function ResearchTab() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/research", {
+      const data = await fetchJson("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userQuery, history: messages.slice(1) }),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
       setMessages([...newMessages, { role: "assistant", content: data.response }]);
     } catch (error: any) {

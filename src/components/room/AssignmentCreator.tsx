@@ -67,6 +67,24 @@ export default function AssignmentCreator({ roomId, onCreateAssignments }: Assig
     loadRoomData();
   }, [roomId]);
 
+  const parseAPIResponse = async (response: Response) => {
+    const text = await response.text();
+
+    if (!response.ok) {
+      let message = text;
+      if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+        message = "Server returned HTML error page";
+      }
+      throw new Error(`API error ${response.status}: ${message}`);
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (parseError: any) {
+      throw new Error(`Invalid JSON response: ${parseError.message}. Response body: ${text.slice(0, 400)}`);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isGenerating) return;
 
@@ -91,21 +109,18 @@ export default function AssignmentCreator({ roomId, onCreateAssignments }: Assig
         })
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        const assistantMessage: ChatMessage = {
-          role: "assistant",
-          content: data.response,
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, assistantMessage]);
+      const data = await parseAPIResponse(response);
 
-        // If assignments were generated, add them
-        if (data.assignments) {
-          setAssignments(data.assignments);
-        }
-      } else {
-        throw new Error(data.error);
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: data.response || "No response text from server",
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, assistantMessage]);
+
+      // If assignments were generated, add them
+      if (Array.isArray(data.assignments)) {
+        setAssignments(data.assignments);
       }
     } catch (error: any) {
       const errorMessage: ChatMessage = {
