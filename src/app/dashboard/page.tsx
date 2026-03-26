@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Navbar from "@/components/Navbar";
 import { getUserRooms, Room, createRoom, joinRoom } from "@/lib/firebase/firestore";
 import { Plus, Users, ArrowRight, Loader2, Link2 } from "lucide-react";
@@ -13,6 +13,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [isPending, startTransition] = useTransition();
   
   // Modals state
   const [showCreate, setShowCreate] = useState(false);
@@ -57,7 +58,9 @@ export default function Dashboard() {
       setShowCreate(false);
       setRoomName("");
       setCourseName("");
-      router.push(`/room/${roomId}`);
+      startTransition(() => {
+        router.push(`/room/${roomId}`);
+      });
     } catch (error) {
       setErrorText("Failed to create room. Please try again.");
     } finally {
@@ -76,7 +79,9 @@ export default function Dashboard() {
       await joinRoom(joinId.trim(), user.uid);
       setShowJoin(false);
       setJoinId("");
-      router.push(`/room/${joinId.trim()}`);
+      startTransition(() => {
+        router.push(`/room/${joinId.trim()}`);
+      });
     } catch (error) {
       setErrorText("Invalid room ID or you are already a member.");
     } finally {
@@ -235,10 +240,10 @@ export default function Dashboard() {
                 </button>
                 <button 
                   type="submit" 
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isPending}
                   className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
                 >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create Team"}
+                  {(isSubmitting || isPending) ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create Team"}
                 </button>
               </div>
             </form>
@@ -281,10 +286,10 @@ export default function Dashboard() {
                 </button>
                 <button 
                   type="submit" 
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isPending}
                   className="px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center"
                 >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Join Team"}
+                  {(isSubmitting || isPending) ? <Loader2 className="w-5 h-5 animate-spin" /> : "Join Team"}
                 </button>
               </div>
             </form>
