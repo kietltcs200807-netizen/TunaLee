@@ -1,0 +1,40 @@
+﻿FIN 202-Corporate Finance- Individual assignment
+Topic: Financial statement analysis
+Requirement: Write up 1,500 words - report; Each student is assigned a listed company and do an analysis of the company financial statements.
+Due date: 23:59 on Friday 27/02/2026 (Week 6), submission on EDUNEXT 
+
+Structure:
+
+• Part 1: Introduction (1.5 marks)
+- Each student is assigned a company listed in Vietnam stock market. 
+- Briefly introduce the company (position, market share, main business, important projects, competitors)
+
+• Part 2: Financial statement analysis (7 marks)
+2.1 Collect the most recent 3-5 years financial data (from 2021 to 2024) (use audited consolidated financial statement and annual report only which are listed on https://cafef.vn/, hsx.vn or hnx.vn) (1.5 marks)
+2.2 Perform Common-size analysis for Balance sheet and Income Statement. Calculate, comment on trend analysis and compare with peer group or industry average. (1.5 marks)
+2.3 Perform Ratios analysis. Calculate, comment on trends and compare with peer group or industry average. (1.5 marks)
+2.4 Perform Dupont analysis [for the nearest year]. Calculate, comment on trends and compare with peer group or industry average. What are the main factors that drive ROE? Peer group is the average of 3 companies in the same industry (including your company). (1.5 marks)
+2.5 Comment on the Statement of Cash flows [for the nearest year]. What can you conclude from the information found in this statement about the financial health of the company? (1 marks)
+
+• Part 3: Conclusion, recommendations (1 mark)
+Summarize your findings, give your perspective about the company’s future and recommend solutions to help managers identify and improve the firm’s financial health in the future. (1 marks)
+
+• References (0.5 mark)
+
+−  Books 
+−  Websites
+
+Information on submission:
+
+➢ Language: Academic English and the limitation of words is 1,500 words (from introduction to conclusion).
+➢ References list and in-text citation must follow Harvard referencing style.
+➢ Each day late submission will lead to two grade deduction in the assignment result. The report will get zero (0) if you submit later than three days.
+➢ Submission: The soft copy of the assignment includes 01 pdf file for report and 01 excel file for calculation and will be submitted to EDUNEXT.
+➢ Plagiarism is not allowable. If breaking the rule, the report will be got zero.
+Note:
+
+1. Font: Times New Roman, Size: 13, Justify.
+2. Paragraph: Before: 6 pt; After: 0 pt; Line spacing: Multiple; At: 1.2
+3. Lưu ý đặt tên file khi gửi file mềm cho giảng viên theo quy định: [Tên họ SV].[Class]IA. FIN202.SP23
+(ví dụ: TuanNH.BAxxxx.IA.FIN202.SP23)
+

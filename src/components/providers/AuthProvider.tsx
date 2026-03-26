@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/config";
+import { upsertUserProfile } from "@/lib/firebase/users";
 
 interface AuthContextType {
   user: User | null;
@@ -25,8 +26,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        try {
+          await upsertUserProfile({
+            uid: currentUser.uid,
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            photoURL: currentUser.photoURL,
+          });
+        } catch (error) {
+          console.error("Could not save user profile:", error);
+        }
+      }
       setLoading(false);
     });
     return () => unsubscribe();

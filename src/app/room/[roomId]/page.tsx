@@ -2,14 +2,14 @@
 
 import TaskBoard from "@/components/room/TaskBoard";
 import DocumentTab from "@/components/room/DocumentTab";
-import ResearchTab from "@/components/room/ResearchTab";
+import RoomSettings from "@/components/room/RoomSettings";
 
 import { useAuth } from "@/components/providers/AuthProvider";
 import Navbar from "@/components/Navbar";
 import { getRoom, getRoomRole, Room } from "@/lib/firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Copy, CheckCircle2, UserCog, Files, Brain, ListTodo } from "lucide-react";
+import { Loader2, Copy, CheckCircle2, UserCog, Files, ListTodo } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function RoomPage({ params }: { params: { roomId: string } }) {
@@ -21,7 +21,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   const [loadingRoom, setLoadingRoom] = useState(true);
   const [copied, setCopied] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<"tasks" | "documents" | "research">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "documents" | "research" | "settings">("tasks");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -124,12 +124,14 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
             icon={<Files className="w-5 h-5 mr-2" />}
             label="Documents"
           />
-          <TabButton 
-            active={activeTab === "research"} 
-            onClick={() => setActiveTab("research")}
-            icon={<Brain className="w-5 h-5 mr-2" />}
-            label="AI Research"
-          />
+          {role === "Leader" && (
+            <TabButton 
+              active={activeTab === "settings"} 
+              onClick={() => setActiveTab("settings")}
+              icon={<UserCog className="w-5 h-5 mr-2" />}
+              label="Settings"
+            />
+          )}
         </div>
 
         {/* Tab Content Areas */}
@@ -145,13 +147,11 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
               <DocumentTab roomId={room.id} role={role!} />
             </motion.div>
           )}
-
-          {activeTab === "research" && (
+          {activeTab === "settings" && role === "Leader" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full">
-              <ResearchTab />
+              <RoomSettings roomId={room.id} />
             </motion.div>
-          )}
-        </div>
+          )}        </div>
       </main>
     </div>
   );

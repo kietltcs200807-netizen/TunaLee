@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { uploadDocument, getRoomDocuments, ProjectDocument } from "@/lib/firebase/storage";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { FileText, Upload, Loader2, BrainCircuit } from "lucide-react";
+import AssignmentCreator from "./AssignmentCreator";
 
 export default function DocumentTab({ roomId, role }: { roomId: string, role: "Leader" | "Member" }) {
   const { user } = useAuth();
@@ -12,7 +13,11 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
   
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [textProcessing, setTextProcessing] = useState(false);
+  const [assignmentText, setAssignmentText] = useState("");
   const [error, setError] = useState("");
+  const [taskType, setTaskType] = useState<"presentation" | "assignment" | "both">("assignment");
+  const [taskDeadline, setTaskDeadline] = useState("");
 
   const loadDocs = async () => {
     setLoading(true);
@@ -62,7 +67,13 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
       const res = await fetch("/api/generate-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, documentUrl: docUrl, members: room.members }),
+        body: JSON.stringify({ 
+          roomId, 
+          documentUrl: docUrl, 
+          members: room.members,
+          type: taskType,
+          deadline: taskDeadline || undefined
+        }),
       });
       
       const data = await res.json();
@@ -77,7 +88,8 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
           assigneeId: t.assigneeId,
           assigneeName: "Member " + t.assigneeId.substring(0, 4),
           deadline: t.deadline,
-          status: "todo"
+          status: "todo",
+          type: t.type || taskType
         });
       }
       
@@ -87,6 +99,61 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
       setError(err.message || "An error occurred during AI processing.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleGenerateTasksFromText = async () => {
+    if (!assignmentText.trim()) {
+      setError("Please paste assignment text before generating tasks.");
+      return;
+    }
+
+    if (!confirm("This will use AI to analyze the pasted assignment text and generate tasks. Continue?")) return;
+
+    setTextProcessing(true);
+    setError("");
+
+    try {
+      const { getRoom } = await import("@/lib/firebase/firestore");
+      const room = await getRoom(roomId);
+      if (!room) throw new Error("Room not found");
+
+      const res = await fetch("/api/generate-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          roomId, 
+          rawText: assignmentText, 
+          members: room.members,
+          type: taskType,
+          deadline: taskDeadline || undefined
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate tasks");
+
+      const { createTask } = await import("@/lib/firebase/tasks");
+      for (const t of data.tasks) {
+        await createTask({
+          roomId,
+          title: t.title,
+          description: t.description,
+          assigneeId: t.assigneeId,
+          assigneeName: "Member " + t.assigneeId.substring(0, 4),
+          deadline: t.deadline,
+          status: "todo",
+          type: t.type || taskType
+        });
+      }
+
+      alert("Tasks generated successfully from text! Check the Task Board.");
+      setAssignmentText("");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "An error occurred during AI text processing.");
+    } finally {
+      setTextProcessing(false);
     }
   };
 
@@ -123,6 +190,79 @@ export default function DocumentTab({ roomId, role }: { roomId: string, role: "L
           </div>
         )}
       </div>
+
+      {role === "Leader" && (
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+          <h4 className="font-semibold text-slate-900 mb-2">Task Generation Options</h4>
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Task Type</label>
+              <select
+                value={taskType}
+                onChange={(e) => setTaskType(e.target.value as "presentation" | "assignment" | "both")}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2"
+              >
+                <option value="assignment">Assignment</option>
+                <option value="presentation">Presentation</option>
+                <option value="both">Both (Assignment + Presentation)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Deadline (Optional)</label>
+              <input
+                type="datetime-local"
+                value={taskDeadline}
+                onChange={(e) => setTaskDeadline(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
+          <p className="text-slate-600 text-sm mb-3">These options will be applied to all generated tasks.</p>
+        </div>
+      )}
+
+      {role === "Leader" && (
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+          <h4 className="font-semibold text-slate-900 mb-2">Leader AI Assignment Chat</h4>
+          <p className="text-slate-600 text-sm mb-3">Paste assignment instructions here (or use uploaded files). The AI will parse and create tasks for your team.</p>
+          <textarea
+            value={assignmentText}
+            onChange={(e) => setAssignmentText(e.target.value)}
+            placeholder="Paste assignment text..."
+            className="w-full min-h-[140px] p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <button
+            onClick={handleGenerateTasksFromText}
+            disabled={textProcessing || !assignmentText.trim()}
+            className="mt-3 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            {textProcessing ? "Processing text..." : "Generate Tasks from Text"}
+          </button>
+        </div>
+      )}
+
+      {role === "Leader" && (
+        <AssignmentCreator
+          roomId={roomId}
+          onCreateAssignments={async (tasks) => {
+            // Create tasks in database
+            const { createTask } = await import("@/lib/firebase/tasks");
+            for (const task of tasks) {
+              await createTask({
+                roomId,
+                title: task.title,
+                description: task.description,
+                assigneeId: task.assigneeId,
+                assigneeName: task.assigneeName,
+                deadline: task.deadline,
+                status: task.status,
+                type: task.type
+              });
+            }
+            alert("Assignments created and posted to team!");
+          }}
+        />
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {documents.map(doc => (
