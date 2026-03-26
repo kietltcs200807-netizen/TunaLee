@@ -49,11 +49,11 @@ function parseTaskArray(raw: string): Array<{ [key: string]: unknown }> {
 }
 
 export async function POST(req: NextRequest) {
-  if (!genAI) {
-    return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
-  }
-
   try {
+    if (!genAI) {
+      return NextResponse.json({ error: "GEMINI_API_KEY is not configured" }, { status: 500 });
+    }
+
     const { documentUrl, rawText, members, type, deadline } = await req.json();
 
     if ((!documentUrl && !rawText) || !members || members.length === 0) {
@@ -64,14 +64,27 @@ export async function POST(req: NextRequest) {
     if (rawText) {
       text = String(rawText);
     } else {
-      const fileRes = await fetch(documentUrl);
-      const arrayBuffer = await fileRes.arrayBuffer();
+      try {
+        const fileRes = await fetch(documentUrl);
+        if (!fileRes.ok) {
+          return NextResponse.json({ error: `Failed to fetch document: ${fileRes.status}` }, { status: 400 });
+        }
+        const arrayBuffer = await fileRes.arrayBuffer();
 
-      if (documentUrl.includes(".pdf") || documentUrl.includes("application%2Fpdf")) {
-        const pdfData = await (pdfParse as any)(Buffer.from(arrayBuffer));
-        text = pdfData.text;
-      } else {
-        text = Buffer.from(arrayBuffer).toString("utf-8");
+        if (documentUrl.includes(".pdf") || documentUrl.includes("application%2Fpdf")) {
+          try {
+            const pdfData = await (pdfParse as any)(Buffer.from(arrayBuffer));
+            text = pdfData.text;
+          } catch (pdfError) {
+            console.error("PDF parsing error:", pdfError);
+            return NextResponse.json({ error: "Failed to parse PDF document" }, { status: 500 });
+          }
+        } else {
+          text = Buffer.from(arrayBuffer).toString("utf-8");
+        }
+      } catch (fetchError) {
+        console.error("Document fetch error:", fetchError);
+        return NextResponse.json({ error: "Failed to fetch document" }, { status: 500 });
       }
     }
 
@@ -80,29 +93,34 @@ export async function POST(req: NextRequest) {
     }
 
     const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const allTasks: Array<{ [key: string]: unknown }> = [];
 
     for (let i = 0; i < chunks.length; i++) {
-      const chunkPrompt = `
-        You are an expert AI project manager.
-        Assign tasks from this part of the assignment and return only a JSON array.
-        Members: ${members.join(", ")}.
-        Task type: ${type || "assignment"} (presentation, assignment, or both).
-        Deadline: ${deadline || "not specified"}.
-        Output for this chunk ONLY and keep this JSON array format:
-        [
-          {"title":"...","description":"...","type":"${type || "assignment"}","assigneeId":"...","deadline":"${deadline || new Date().toISOString()}","estimatedHours": 1}
-        ]
+      try {
+        const chunkPrompt = `
+          You are an expert AI project manager.
+          Assign tasks from this part of the assignment and return only a JSON array.
+          Members: ${members.join(", ")}.
+          Task type: ${type || "assignment"} (presentation, assignment, or both).
+          Deadline: ${deadline || "not specified"}.
+          Output for this chunk ONLY and keep this JSON array format:
+          [
+            {"title":"...","description":"...","type":"${type || "assignment"}","assigneeId":"...","deadline":"${deadline || new Date().toISOString()}","estimatedHours": 1}
+          ]
 
-        Chunk ${i + 1}/${chunks.length} content below:
-        ${chunks[i]}
-      `;
+          Chunk ${i + 1}/${chunks.length} content below:
+          ${chunks[i]}
+        `;
 
-      const result = await model.generateContent(chunkPrompt);
-      const taskArray = parseTaskArray(result.response.text());
-      if (taskArray.length > 0) {
-        allTasks.push(...taskArray);
+        const result = await model.generateContent(chunkPrompt);
+        const taskArray = parseTaskArray(result.response.text());
+        if (taskArray.length > 0) {
+          allTasks.push(...taskArray);
+        }
+      } catch (aiError) {
+        console.error("AI generation error for chunk", i, aiError);
+        // Continue with other chunks or return partial results
       }
     }
 
